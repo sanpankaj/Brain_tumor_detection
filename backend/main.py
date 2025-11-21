@@ -1,11 +1,16 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 import io
 import base64
+import os
+import uuid
+import shutil
 from model import BrainTumorModel
 from utils import preprocess_image, make_gradcam_heatmap, save_and_display_gradcam
+import database
 
 app = FastAPI(title="Brain Tumor Detection API")
 
@@ -18,12 +23,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize model
+# Initialize model and database
 tumor_model = BrainTumorModel()
+database.init_db()
+
+# Ensure uploads directory exists
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Mount static directory for serving images
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 @app.get("/")
 def read_root():
     return {"message": "Brain Tumor Detection API is running"}
+
+@app.get("/history")
+def get_history():
+    return database.get_history()
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
@@ -31,10 +48,28 @@ async def predict(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File must be an image")
 
     try:
+        # Save uploaded file
+        file_extension = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        file_path = os.path.join(UPLOAD_DIR, unique_filename)
+        
         contents = await file.read()
+        
+        # Save to disk
+        with open(file_path, "wb") as f:
+            f.write(contents)
+
         processed_img, original_img = preprocess_image(contents)
         
         prediction, confidence, probabilities = tumor_model.predict(processed_img)
+        
+        # Save to database
+        database.add_prediction(
+            unique_filename, 
+            prediction, 
+            float(confidence), 
+            [float(p) for p in probabilities]
+        )
         
         # Grad-CAM
         last_conv_layer = tumor_model.get_last_conv_layer()
