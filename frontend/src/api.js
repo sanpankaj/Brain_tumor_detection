@@ -1,20 +1,27 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000';
+export const API_URL = 'http://localhost:8000';
 
 export const predictImage = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  try {
-    const response = await axios.post(`${API_URL}/predict`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw error;
+  const response = await fetch(`${API_URL}/predict`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error('Prediction failed');
   }
+
+  return response.json();
+};
+
+export const fetchHistory = async () => {
+  const response = await fetch(`${API_URL}/history`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch history');
+  }
+  return response.json();
 };

@@ -64,13 +64,27 @@ const Results = ({ result }) => {
           <Activity className="w-5 h-5 mr-2 text-purple-400" />
           Grad-CAM Visualization
         </h3>
-        <div className="relative aspect-square bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center">
+        <div className="relative aspect-square bg-slate-900 rounded-xl overflow-hidden flex items-center justify-center group">
           {heatmap ? (
-            <img
-              src={`data:image/png;base64,${heatmap}`}
-              alt="Grad-CAM Heatmap"
-              className="w-full h-full object-contain"
-            />
+            <>
+              <img
+                src={`data:image/png;base64,${heatmap}`}
+                alt="Grad-CAM Heatmap"
+                className="w-full h-full object-contain"
+              />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-4 pt-12">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-slate-300 text-sm font-medium">Prediction</p>
+                    <p className={`text-xl font-bold ${statusColor}`}>{prediction}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-slate-300 text-sm font-medium">Accuracy</p>
+                    <p className="text-xl font-bold text-white font-mono">{confidence}</p>
+                  </div>
+                </div>
+              </div>
+            </>
           ) : (
             <p className="text-slate-500">Heatmap not available</p>
           )}
